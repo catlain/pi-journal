@@ -13,8 +13,14 @@ export interface TimeRange {
 const DURATION_RE = /^(\d+)([mhdw])$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function toISO(date: Date): string {
-	return date.toISOString();
+function toLocalISO(date: Date): string {
+	const y = date.getFullYear();
+	const m = String(date.getMonth() + 1).padStart(2, "0");
+	const d = String(date.getDate()).padStart(2, "0");
+	const hh = String(date.getHours()).padStart(2, "0");
+	const mm = String(date.getMinutes()).padStart(2, "0");
+	const ss = String(date.getSeconds()).padStart(2, "0");
+	return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
 }
 
 function startOfDay(date: Date): Date {
@@ -35,23 +41,36 @@ function endOfDay(date: Date): Date {
  * @returns TimeRange 或 null（无效输入）
  */
 export function parseTimeRange(input?: string): TimeRange | null {
-	if (!input) {
-		const since = new Date(Date.now() - 86400000);
-		return { since: toISO(since), until: toISO(new Date()) };
-	}
-
 	const now = new Date();
+
+	// 空字符串或未定义 → 默认 1d
+	if (!input) {
+		if (input === "") return null; // 空字符串返回 null
+		const since = new Date(Date.now() - 86400000);
+		return { since: toLocalISO(since), until: toLocalISO(now) };
+	}
 
 	// today
 	if (input === "today") {
-		return { since: toISO(startOfDay(now)), until: toISO(endOfDay(now)) };
+		return { since: toLocalISO(startOfDay(now)), until: toLocalISO(endOfDay(now)) };
 	}
 
 	// yesterday
 	if (input === "yesterday") {
 		const yd = new Date(now);
 		yd.setDate(yd.getDate() - 1);
-		return { since: toISO(startOfDay(yd)), until: toISO(endOfDay(yd)) };
+		return { since: toLocalISO(startOfDay(yd)), until: toLocalISO(endOfDay(yd)) };
+	}
+
+	// this_week
+	if (input === "this_week") {
+		const dayOfWeek = now.getDay(); // 0=Sun
+		const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+		const monday = new Date(now);
+		monday.setDate(now.getDate() + mondayOffset);
+		const sunday = new Date(monday);
+		sunday.setDate(monday.getDate() + 6);
+		return { since: toLocalISO(startOfDay(monday)), until: toLocalISO(endOfDay(sunday)) };
 	}
 
 	// 持续时间: 30m, 1h, 1d, 3d, 1w
@@ -76,7 +95,7 @@ export function parseTimeRange(input?: string): TimeRange | null {
 			default:
 				return null;
 		}
-		return { since: toISO(new Date(now.getTime() - ms)), until: toISO(now) };
+		return { since: toLocalISO(new Date(now.getTime() - ms)), until: toLocalISO(now) };
 	}
 
 	// YYYY-MM-DD
@@ -84,14 +103,14 @@ export function parseTimeRange(input?: string): TimeRange | null {
 	if (dateMatch) {
 		const d = new Date(input + "T00:00:00");
 		if (isNaN(d.getTime())) return null;
-		return { since: toISO(startOfDay(d)), until: toISO(endOfDay(d)) };
+		return { since: toLocalISO(startOfDay(d)), until: toLocalISO(endOfDay(d)) };
 	}
 
-	// ISO 时间戳直接作为 since
+	// ISO 时间戳直接作为 since（精确时间点，since == until）
 	if (input.includes("T")) {
 		const d = new Date(input);
 		if (!isNaN(d.getTime())) {
-			return { since: toISO(d), until: toISO(now) };
+			return { since: toLocalISO(d), until: toLocalISO(d) };
 		}
 	}
 
