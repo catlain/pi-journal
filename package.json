@@ -10,5 +10,8 @@
   "peerDependenciesMeta": {
     "@earendil-works/pi-coding-agent": { "optional": true },
     "@earendil-works/pi-tui": { "optional": true }
+  },
+  "pi": {
+    "extensions": ["."]
   }
 }
