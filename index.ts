@@ -17,26 +17,17 @@ async function safeCollect<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
 }
 
 /**
- * 生成日志报告
- *
- * @param opts.timeRange - 时间范围描述（"today", "yesterday", "this_week", "1d", "2026-05-12" 等）
- * @returns Markdown 格式的报告，无效输入返回 null
+ * 生成日志报告（内部实现）
  */
-export async function doJournalReport(opts: { timeRange: string }): Promise<string | null> {
-	const { timeRange } = opts;
-	if (!timeRange) return null;
-
-	// 判断日报/周报类型
+async function generateReport(timeRange: string): Promise<string | null> {
 	const isWeekly = timeRange === "this_week";
 	const type = isWeekly ? "weekly" as const : "daily" as const;
 
-	// 解析时间范围
 	const range = parseTimeRange(timeRange);
 	if (!range) return null;
 
 	const { since, until } = range;
 
-	// 计算期间描述
 	let period: string;
 	if (isWeekly) {
 		const s = new Date(since);
@@ -48,48 +39,75 @@ export async function doJournalReport(opts: { timeRange: string }): Promise<stri
 		period = since.slice(0, 10);
 	}
 
-	// 三条管道并行采集（单条失败不阻塞其他）
 	const [gitActivity, memoryChanges, sessionActivities] = await Promise.all([
-		safeCollect(
-			() => collectGitActivity({ repoPaths: [], since, until }),
-			[],
-		),
-		safeCollect(
-			() => collectMemoryChanges({ since, until }),
-			[],
-		),
-		safeCollect(
-			() => collectSessionActivities({ since, until }),
-			[],
-		),
+		safeCollect(() => collectGitActivity({ repoPaths: [], since, until }), []),
+		safeCollect(() => collectMemoryChanges({ since, until }), []),
+		safeCollect(() => collectSessionActivities({ since, until }), []),
 	]);
 
-	// 构建摘要
 	const summary = {
-		totalCommits: gitActivity.reduce(
-			(sum: number, g: any) => sum + (g.commits || 0), 0,
-		),
+		totalCommits: gitActivity.reduce((sum: number, g: any) => sum + (g.commits || 0), 0),
 		totalSessions: sessionActivities.length,
-		totalEdits: sessionActivities.reduce(
-			(sum: number, s: any) => sum + (s.writeCount || 0), 0,
-		),
+		totalEdits: sessionActivities.reduce((sum: number, s: any) => sum + (s.writeCount || 0), 0),
 		peakHours: "",
 		mainTopics: [] as string[],
 	};
 
-	return renderReport({
-		type,
-		period,
-		gitActivity,
-		memoryChanges,
-		sessionActivities,
-		summary,
-	});
+	return renderReport({ type, period, gitActivity, memoryChanges, sessionActivities, summary });
 }
 
-const factory: ExtensionFactory = () => ({
-	name: 'journal',
-	tools: [],
-	commands: [],
-});
+const factory: ExtensionFactory = (pi) => {
+	// --- 命令: /journal ---
+	pi.registerCommand('journal', {
+		description: '生成开发日报/周报。用法: /journal [today|yesterday|this_week|1d|3d|YYYY-MM-DD]，默认 today',
+		handler: async (args: string, ctx) => {
+			const timeRange = args.trim() || 'today';
+			ctx.ui.notify('📓 正在采集数据，生成报告中...', 'info');
+
+			try {
+				const report = await generateReport(timeRange);
+				if (!report) {
+					ctx.ui.notify(`无效的时间范围: "${timeRange}"\n\n支持格式: today, yesterday, this_week, 1d, 3d, 1w, YYYY-MM-DD`, 'warning');
+					return;
+				}
+				pi.appendEntry('assistant', report);
+			} catch (err: any) {
+				ctx.ui.notify(`生成报告失败: ${err.message}`, 'error');
+			}
+		},
+	});
+
+	// --- 工具: journal ---
+	pi.registerTool({
+		name: 'journal',
+		label: 'Journal',
+		description: '生成开发日报/周报。采集 git 活动、记忆变更、会话活动，生成 Markdown 报告。用户说"写日记"、"写日报"、"写周报"、"今天做了什么"时使用此工具。',
+		promptSnippet: '生成开发日记/日报/周报',
+		parameters: {
+			type: 'object',
+			properties: {
+				timeRange: {
+					type: 'string',
+					description: '时间范围: today, yesterday, this_week, 1d, 3d, 1w, YYYY-MM-DD。默认 today',
+				},
+			},
+			required: [],
+		},
+		async execute(_toolCallId: string, params: Record<string, unknown>): Promise<any> {
+			const timeRange = (params.timeRange as string) || 'today';
+			try {
+				const report = await generateReport(timeRange);
+				if (!report) {
+					return { content: [{ type: 'text', text: `无效的时间范围: "${timeRange}"\n\n支持格式: today, yesterday, this_week, 1d, 3d, 1w, YYYY-MM-DD` }] };
+				}
+				return { content: [{ type: 'text', text: report }] };
+			} catch (err: any) {
+				return { content: [{ type: 'text', text: `生成报告失败: ${err.message}` }] };
+			}
+		},
+	});
+};
+
 export default factory;
+
+export { generateReport as doJournalReport };

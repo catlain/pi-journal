@@ -39,7 +39,7 @@ describe("doJournalReport（集成测试）", () => {
 
 	it("完整流程：调用三条管道 + render，返回 Markdown", async () => {
 		setupMocks();
-		const result = await doJournalReport({ timeRange: "today" });
+		const result = await doJournalReport("today");
 		expect(collectGitActivity).toHaveBeenCalledOnce();
 		expect(collectMemoryChanges).toHaveBeenCalledOnce();
 		expect(collectSessionActivities).toHaveBeenCalledOnce();
@@ -49,7 +49,7 @@ describe("doJournalReport（集成测试）", () => {
 
 	it("三条管道收到相同的时间范围", async () => {
 		setupMocks([], [], []);
-		await doJournalReport({ timeRange: "today" });
+		await doJournalReport("today");
 		const [ga] = (collectGitActivity as Mock).mock.calls[0];
 		const [ma] = (collectMemoryChanges as Mock).mock.calls[0];
 		const [sa] = (collectSessionActivities as Mock).mock.calls[0];
@@ -59,7 +59,7 @@ describe("doJournalReport（集成测试）", () => {
 
 	it("renderReport 接收到汇总数据和摘要", async () => {
 		setupMocks();
-		await doJournalReport({ timeRange: "today" });
+		await doJournalReport("today");
 		const ra = (renderReport as Mock).mock.calls[0][0];
 		expect(ra.gitActivity).toEqual(mockGit);
 		expect(ra.memoryChanges).toEqual(mockMem);
@@ -71,13 +71,13 @@ describe("doJournalReport（集成测试）", () => {
 	it("周报：timeRange='this_week' 触发 type='weekly'", async () => {
 		setupMocks([], [], []);
 		(renderReport as Mock).mockReturnValue("# 周报");
-		await doJournalReport({ timeRange: "this_week" });
+		await doJournalReport("this_week");
 		expect((renderReport as Mock).mock.calls[0][0].type).toBe("weekly");
 	});
 
 	it("所有管道空数据时仍调用 renderReport", async () => {
 		setupMocks([], [], []);
-		const result = await doJournalReport({ timeRange: "today" });
+		const result = await doJournalReport("today");
 		expect(renderReport).toHaveBeenCalledOnce();
 		expect(result).toBeTruthy();
 	});
@@ -87,7 +87,7 @@ describe("doJournalReport（集成测试）", () => {
 		(collectMemoryChanges as Mock).mockResolvedValue(mockMem);
 		(collectSessionActivities as Mock).mockResolvedValue(mockSess);
 		(renderReport as Mock).mockReturnValue(mockReport);
-		const result = await doJournalReport({ timeRange: "today" });
+		const result = await doJournalReport("today");
 		expect(collectMemoryChanges).toHaveBeenCalled();
 		expect(collectSessionActivities).toHaveBeenCalled();
 		expect(result).toBeTruthy();
@@ -98,23 +98,23 @@ describe("doJournalReport（集成测试）", () => {
 		(collectMemoryChanges as Mock).mockRejectedValue(new Error("f"));
 		(collectSessionActivities as Mock).mockRejectedValue(new Error("f"));
 		(renderReport as Mock).mockReturnValue(mockReport);
-		expect(await doJournalReport({ timeRange: "today" })).toBeTruthy();
+		expect(await doJournalReport("today")).toBeTruthy();
 	});
 
 	it("无效 timeRange 返回 null，不调任何管道", async () => {
 		setupMocks();
-		expect(await doJournalReport({ timeRange: "invalid" })).toBeNull();
+		expect(await doJournalReport("invalid")).toBeNull();
 		expect(collectGitActivity).not.toHaveBeenCalled();
 	});
 
 	it("空 timeRange 返回 null", async () => {
 		setupMocks();
-		expect(await doJournalReport({ timeRange: "" })).toBeNull();
+		expect(await doJournalReport("")).toBeNull();
 	});
 
 	it("报告包含 AI 总结第五节骨架", async () => {
 		setupMocks();
-		const result = await doJournalReport({ timeRange: "today" });
+		const result = await doJournalReport("today");
 		expect(result).toContain("AI 总结");
 		expect(result).toContain("本节内容将在报告生成后由 AI 补写");
 	});
