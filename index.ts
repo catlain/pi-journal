@@ -4,6 +4,39 @@ import { collectGitActivity } from './lib/git';
 import { collectMemoryChanges } from './lib/memory';
 import { collectSessionActivities } from './lib/sessions';
 import { renderReport } from './lib/render';
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+
+/** 自动发现 ~/.pi/agent/git/ 下的 git 仓库 */
+function discoverGitRepos(): string[] {
+	const gitBase = join(homedir(), '.pi/agent/git');
+	try {
+		const hosts = readdirSync(gitBase);
+		const repos: string[] = [];
+		for (const host of hosts) {
+			const hostPath = join(gitBase, host);
+			if (!statSync(hostPath).isDirectory()) continue;
+			const owners = readdirSync(hostPath);
+			for (const owner of owners) {
+				const ownerPath = join(hostPath, owner);
+				if (!statSync(ownerPath).isDirectory()) continue;
+				const projects = readdirSync(ownerPath);
+				for (const proj of projects) {
+					const projPath = join(ownerPath, proj);
+					try {
+						if (statSync(projPath).isDirectory() && statSync(join(projPath, '.git')).isDirectory()) {
+							repos.push(projPath);
+						}
+					} catch { /* not a git repo */ }
+				}
+			}
+		}
+		return repos;
+	} catch {
+		return [];
+	}
+}
 
 /**
  * 安全执行采集管道，异常时返回 fallback 值
@@ -40,7 +73,7 @@ async function generateReport(timeRange: string): Promise<string | null> {
 	}
 
 	const [gitActivity, memoryChanges, sessionActivities] = await Promise.all([
-		safeCollect(() => collectGitActivity({ repoPaths: [], since, until }), []),
+		safeCollect(() => collectGitActivity({ repoPaths: discoverGitRepos(), since, until }), []),
 		safeCollect(() => collectMemoryChanges({ since, until }), []),
 		safeCollect(() => collectSessionActivities({ since, until }), []),
 	]);

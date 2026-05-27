@@ -5,7 +5,7 @@
  */
 
 // 直接引用 session-analyzer/core（测试通过 vitest mock 路径 "../session-analyzer/core" 拦截）
-import { getSessionFiles, readJsonlFile } from "../session-analyzer/core";
+import { getSessionFiles, readJsonlFile } from "pi-session-analyzer/core";
 
 export interface SessionActivityResult {
 	sessionId: string;

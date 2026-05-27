@@ -4,7 +4,8 @@
   "description": "Session journaling extension for pi-coding-agent",
   "main": "index.ts",
   "dependencies": {
-    "@pi-atelier/shared-utils": "github:catlain/pi-shared-utils"
+    "@pi-atelier/shared-utils": "github:catlain/pi-shared-utils",
+    "pi-session-analyzer": "github:catlain/pi-session-analyzer"
   },
   "devDependencies": {
     "vitest": "^3.0.0"
@@ -29,7 +30,7 @@
   "files": [
     "index.ts",
     "lib/",
-    "session-analyzer/",
+
     "README.md",
     "README.en.md",
     "tsconfig.json",

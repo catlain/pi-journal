@@ -10,13 +10,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // 模拟 session-analyzer/core.ts 的直接相对 import
-vi.mock("../session-analyzer/core", () => ({
+vi.mock("pi-session-analyzer/core", () => ({
 	getSessionFiles: vi.fn(),
 	readJsonlFile: vi.fn(),
 }));
 
 import { collectSessionActivities } from "../lib/sessions";
-import { getSessionFiles, readJsonlFile } from "../session-analyzer/core";
+import { getSessionFiles, readJsonlFile } from "pi-session-analyzer/core";
 import type { Mock } from "vitest";
 
 // ── Mock 数据 ────────────────────────────────────────────
