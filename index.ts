@@ -146,3 +146,4 @@ const factory: ExtensionFactory = (pi) => {
 export default factory;
 
 export { generateReport as doJournalReport };
+export { discoverGitRepos, safeCollect };
