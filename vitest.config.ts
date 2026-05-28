@@ -1,13 +1,8 @@
-import { defineConfig } from "vitest/config";
+import { createConfig } from "../vitest.config.base";
 
-export default defineConfig({
+export default createConfig({
 	test: {
-		include: ["tests/**/*.test.ts"],
-		environment: "node",
-		testTimeout: 10000,
 		coverage: {
-			provider: "v8" as const,
-			reporter: ["text", "html"],
 			exclude: [
 				"lib/types.ts",
 				"vitest.config.ts",
