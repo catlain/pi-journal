@@ -4,8 +4,8 @@
  * 从 session 文件读取 JSONL 条目，按 session 聚合统计
  */
 
-// 直接引用 session-analyzer/core（测试通过 vitest mock 路径 "../session-analyzer/core" 拦截）
 import { getSessionFiles, readJsonlFile } from "pi-session-analyzer/core";
+import type { Entry } from "pi-session-analyzer/core";
 
 export interface SessionActivityResult {
 	sessionId: string;
@@ -53,7 +53,7 @@ export async function collectSessionActivities(opts: {
 
 	let files: string[];
 	try {
-		files = await (getSessionFiles as any)();
+		files = await getSessionFiles();
 	} catch {
 		return [];
 	}
@@ -71,7 +71,7 @@ export async function collectSessionActivities(opts: {
 		}
 
 		try {
-			const entries: any[] = await (readJsonlFile as any)(file);
+			const entries: Entry[] = await readJsonlFile(file);
 			const sessionId = extractSessionId(file);
 
 			// 空文件 → 仍返回统计为 0 的条目
@@ -86,15 +86,16 @@ export async function collectSessionActivities(opts: {
 			}
 
 			// 按 sessionId 聚合（取第一个有 sessionId 的条目）
-			const sid = entries.find((e: any) => e.sessionId)?.sessionId ?? sessionId;
-			const toolUse = entries.filter((e: any) => e.type === "tool_use");
-			const readCount = toolUse.filter((e: any) => e.content?.tool === "read").length;
-			const writeCount = toolUse.filter((e: any) =>
-				e.content?.tool === "write" || e.content?.tool === "edit",
-			).length;
-			const totalTokens = entries.reduce((sum: number, e: any) => sum + (e.tokens ?? 0), 0);
+			const sid = entries.find((e) => e.sessionId)?.sessionId ?? sessionId;
+			const toolUse = entries.filter((e) => e.type === "tool_use");
+			const readCount = toolUse.filter((e) => (e.content as Record<string, unknown>)?.tool === "read").length;
+			const writeCount = toolUse.filter((e) => {
+				const tool = (e.content as Record<string, unknown>)?.tool;
+				return tool === "write" || tool === "edit";
+			}).length;
+			const totalTokens = entries.reduce((sum: number, e) => sum + ((e.tokens as number) ?? 0), 0);
 			const timestamps = entries
-				.map((e: any) => new Date(e.timestamp).getTime())
+				.map((e) => new Date(e.timestamp as string).getTime())
 				.filter((t: number) => !isNaN(t))
 				.sort();
 			const durationMs = timestamps.length > 1
@@ -103,7 +104,7 @@ export async function collectSessionActivities(opts: {
 
 			const filesSet = new Set<string>();
 			for (const e of toolUse) {
-				const p = e.content?.args?.path;
+				const p = ((e.content as Record<string, unknown>)?.args as Record<string, unknown>)?.path as string | undefined;
 				if (p) filesSet.add(p);
 			}
 

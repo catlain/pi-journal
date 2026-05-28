@@ -1,8 +1,10 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { parseTimeRange } from './lib/time';
 import { collectGitActivity } from './lib/git';
+import type { GitActivityResult } from './lib/git';
 import { collectMemoryChanges } from './lib/memory';
 import { collectSessionActivities } from './lib/sessions';
+import type { SessionActivityResult } from './lib/sessions';
 import { renderReport } from './lib/render';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -79,9 +81,9 @@ async function generateReport(timeRange: string): Promise<string | null> {
 	]);
 
 	const summary = {
-		totalCommits: gitActivity.reduce((sum: number, g: any) => sum + (g.commits || 0), 0),
+		totalCommits: gitActivity.reduce((sum, g: GitActivityResult) => sum + g.commits, 0),
 		totalSessions: sessionActivities.length,
-		totalEdits: sessionActivities.reduce((sum: number, s: any) => sum + (s.writeCount || 0), 0),
+		totalEdits: sessionActivities.reduce((sum, s: SessionActivityResult) => sum + s.writeCount, 0),
 		peakHours: "",
 		mainTopics: [] as string[],
 	};
@@ -104,8 +106,8 @@ const factory: ExtensionFactory = (pi) => {
 					return;
 				}
 				pi.appendEntry('assistant', report);
-			} catch (err: any) {
-				ctx.ui.notify(`生成报告失败: ${err.message}`, 'error');
+			} catch (err: unknown) {
+				ctx.ui.notify(`生成报告失败: ${err instanceof Error ? err.message : String(err)}`, 'error');
 			}
 		},
 	});
@@ -126,7 +128,7 @@ const factory: ExtensionFactory = (pi) => {
 			},
 			required: [],
 		},
-		async execute(_toolCallId: string, params: Record<string, unknown>): Promise<any> {
+		async execute(_toolCallId: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {
 			const timeRange = (params.timeRange as string) || 'today';
 			try {
 				const report = await generateReport(timeRange);
@@ -134,8 +136,8 @@ const factory: ExtensionFactory = (pi) => {
 					return { content: [{ type: 'text', text: `无效的时间范围: "${timeRange}"\n\n支持格式: today, yesterday, this_week, 1d, 3d, 1w, YYYY-MM-DD` }] };
 				}
 				return { content: [{ type: 'text', text: report }] };
-			} catch (err: any) {
-				return { content: [{ type: 'text', text: `生成报告失败: ${err.message}` }] };
+			} catch (err: unknown) {
+				return { content: [{ type: 'text', text: `生成报告失败: ${err instanceof Error ? err.message : String(err)}` }] };
 			}
 		},
 	});
