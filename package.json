@@ -8,6 +8,7 @@
     "pi-session-analyzer": "github:catlain/pi-session-analyzer"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
     "vitest": "^3.0.0"
   },
   "peerDependencies": {
@@ -30,7 +31,6 @@
   "files": [
     "index.ts",
     "lib/",
-
     "README.md",
     "README.en.md",
     "tsconfig.json",
