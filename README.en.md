@@ -2,6 +2,8 @@
 
 # pi-journal
 
+[Source Code](https://github.com/catlain/pi-journal) | [npm](https://www.npmjs.com/package/pi-journal)
+
 Session journaling extension for [pi](https://github.com/earendil-works/pi-coding-agent) — automatic session logging, entry indexing, and timeline reconstruction.
 
 ## Why You Need It
