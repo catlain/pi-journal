@@ -1,6 +1,6 @@
 {
   "name": "pi-journal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Session journaling extension for pi-coding-agent",
   "main": "index.ts",
   "dependencies": {
@@ -35,10 +35,6 @@
     "README.en.md",
     "tsconfig.json",
     "package.json"
-  ],
-  "bundleDependencies": [
-    "@pi-atelier/shared-utils",
-    "pi-session-analyzer"
   ],
   "keywords": [
     "pi-package"
