@@ -1,6 +1,6 @@
 import type { ExtensionFactory } from '@earendil-works/pi-coding-agent';
 import { parseTimeRange } from './lib/time';
-import { collectGitActivity } from './lib/git';
+import { collectGitActivity, collectCommitMessages } from './lib/git';
 import type { GitActivityResult } from './lib/git';
 import { collectMemoryChanges } from './lib/memory';
 import { collectSessionActivities } from './lib/sessions';
@@ -80,6 +80,12 @@ async function generateReport(timeRange: string): Promise<string | null> {
 		safeCollect(() => collectSessionActivities({ since, until }), []),
 	]);
 
+	// 采集 commit messages（需要 gitActivity 结果）
+	const gitCommitMessages = await safeCollect(
+		() => collectCommitMessages(discoverGitRepos(), since, until),
+		[],
+	);
+
 	const summary = {
 		totalCommits: gitActivity.reduce((sum, g: GitActivityResult) => sum + g.commits, 0),
 		totalSessions: sessionActivities.length,
@@ -88,7 +94,7 @@ async function generateReport(timeRange: string): Promise<string | null> {
 		mainTopics: [] as string[],
 	};
 
-	return renderReport({ type, period, gitActivity, memoryChanges, sessionActivities, summary });
+	return renderReport({ type, period, gitActivity, gitCommitMessages, memoryChanges, sessionActivities, summary });
 }
 
 const factory: ExtensionFactory = (pi) => {

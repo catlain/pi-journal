@@ -7,17 +7,20 @@
  * - 错误：readJsonlFile 失败、getSessionFiles 异常
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// 模拟 session-analyzer/core.ts 的直接相对 import
-vi.mock("pi-session-analyzer/core", () => ({
-	getSessionFiles: vi.fn(),
-	readJsonlFile: vi.fn(),
-}));
-
-import { collectSessionActivities } from "../lib/sessions";
-import { getSessionFiles, readJsonlFile } from "pi-session-analyzer/core";
+import { collectSessionActivities, _injectModules } from "../lib/sessions";
 import type { Mock } from "vitest";
+
+const getSessionFiles = vi.fn();
+const readJsonlFile = vi.fn();
+
+// 注入 mock 模块
+_injectModules({
+	core: { getSessionFiles, readJsonlFile },
+	analyze: null,
+	takeover: null,
+});
 
 // ── Mock 数据 ────────────────────────────────────────────
 

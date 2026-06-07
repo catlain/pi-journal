@@ -65,6 +65,7 @@ describe("真实数据集成测试", () => {
 			type: "daily",
 			period: range!.since.slice(0, 10),
 			gitActivity: git,
+			gitCommitMessages: [],
 			memoryChanges: mem,
 			sessionActivities: sess,
 			summary: {

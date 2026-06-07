@@ -59,3 +59,30 @@ export function collectGitActivity(opts: {
 
 	return results;
 }
+
+/**
+ * 采集多个仓库在时间范围内的 commit messages
+ * 返回与 repoPaths 对应的二维数组
+ */
+export function collectCommitMessages(
+	repoPaths: string[],
+	since: string,
+	until: string,
+): string[][] {
+	const results: string[][] = [];
+
+	for (const repo of repoPaths) {
+		try {
+			const log = execSync(
+				`git log --after="${since}" --before="${until}" --format="%s"`,
+				{ cwd: repo, encoding: "utf-8" },
+			);
+			const msgs = log.trim().split("\n").filter(Boolean);
+			results.push(msgs);
+		} catch {
+			results.push([]);
+		}
+	}
+
+	return results;
+}

@@ -27,6 +27,7 @@ const baseInput = {
 	type: "daily" as const,
 	period: "2026-05-12",
 	gitActivity: mockGit,
+	gitCommitMessages: [["feat: add auth module", "fix: login redirect"]] as string[][],
 	memoryChanges: mockMemory,
 	sessionActivities: mockSessions,
 	summary: mockSummary,
@@ -35,58 +36,47 @@ const baseInput = {
 const emptyInput = {
 	type: "daily" as const,
 	period: "2026-05-12",
-	gitActivity: [],
-	memoryChanges: [],
-	sessionActivities: [],
+	gitActivity: [] as typeof mockGit,
+	gitCommitMessages: [] as string[][],
+	memoryChanges: [] as typeof mockMemory,
+	sessionActivities: [] as typeof mockSessions,
 	summary: { totalCommits: 0, totalSessions: 0, totalEdits: 0, peakHours: "", mainTopics: [] },
 };
 
 describe("renderReport", () => {
-	it("日报包含全部 4 个章节标题", () => {
+	it("日报包含核心章节标题", () => {
 		const r = renderReport(baseInput);
 		expect(r).toContain("# 日报");
-		expect(r).toContain("## Git 活动");
-		expect(r).toContain("## 记忆变更");
-		expect(r).toContain("## 会话活动");
-		expect(r).toContain("## 摘要");
+		expect(r).toContain("## 📦 Git 提交记录");
+		expect(r).toContain("## ✍️ 日记内容");
 	});
 
-	it("日报包含具体统计数据", () => {
+	it("日报包含统计数据", () => {
 		const r = renderReport(baseInput);
 		expect(r).toContain("5"); // commits
-		expect(r).toContain("1"); // sessions
-		expect(r).toContain("7"); // edits
+		expect(r).toContain("25000"); // tokens
 	});
 
-	it("周报导航标题和范围正确", () => {
-		const r = renderReport({ ...emptyInput, type: "weekly", period: "05-11 ~ 05-17", summary: { ...emptyInput.summary } });
+	it("周报标题和范围正确", () => {
+		const r = renderReport({ ...emptyInput, type: "weekly", period: "05-11 ~ 05-17" });
 		expect(r).toContain("# 周报");
 		expect(r).toContain("05-11 ~ 05-17");
 	});
 
-	it("空 Git 活动不生成表格行", () => {
+	it("空 Git 活动显示无活动提示", () => {
 		const r = renderReport(emptyInput);
-		const lines = r.split("\n");
-		const idx = lines.findIndex((l) => l.startsWith("## Git"));
-		expect(lines.slice(idx + 1).filter((l) => l.startsWith("|")).length).toBe(0);
+		expect(r).toContain("无 Git 活动");
 	});
 
-	it("空记忆变更显示占位文案", () => {
+	it("空记忆变更显示无变更", () => {
 		const r = renderReport(emptyInput);
-		expect(r).toContain("## 记忆变更");
 		expect(r).toContain("无变更");
 	});
 
-	it("空会话活动不显示 session 详情", () => {
-		const r = renderReport(emptyInput);
-		expect(r).not.toContain("abc123");
-	});
-
-	it("Git 表格包含仓库名和提交数", () => {
+	it("Git 提交记录包含 commit message", () => {
 		const r = renderReport(baseInput);
-		expect(r).toContain("pi-agent");
-		expect(r).toContain("5");
-		expect(r).toContain("12"); // filesChanged
+		expect(r).toContain("feat: add auth module");
+		expect(r).toContain("fix: login redirect");
 	});
 
 	it("会话活动包含 sessionId 和 token 数", () => {
@@ -103,9 +93,37 @@ describe("renderReport", () => {
 			duration: "10m", keyFiles: [],
 		}));
 		const r = renderReport({
-			...baseInput, sessionActivities: many,
+			...baseInput, sessionActivities: many, gitCommitMessages: [],
 			summary: { totalCommits: 0, totalSessions: 20, totalEdits: 0, peakHours: "", mainTopics: [] },
 		});
 		for (let i = 0; i < 20; i++) expect(r).toContain(`s${i}`);
+	});
+
+	it("包含 AI 写作引导提示", () => {
+		const r = renderReport(baseInput);
+		expect(r).toContain("功能增减");
+		expect(r).toContain("决策变更");
+		expect(r).toContain("踩坑记录");
+	});
+
+	it("语义语料正确渲染", () => {
+		const sessionWithSemantic = [{
+			sessionId: "semantic1", title: "测试语义", toolCount: 5,
+			readCount: 2, writeCount: 3, totalTokens: 1000,
+			duration: "10m", keyFiles: [],
+			semantic: {
+				summary: "实现了用户认证",
+				digest: "user: 做一下认证\nassistant: 好的",
+				keyDecisions: ["使用 JWT 方案"],
+				userIntents: ["实现用户认证"],
+			},
+		}];
+		const r = renderReport({
+			...baseInput, sessionActivities: sessionWithSemantic,
+			summary: baseInput.summary,
+		});
+		expect(r).toContain("实现了用户认证");
+		expect(r).toContain("使用 JWT 方案");
+		expect(r).toContain("实现用户认证");
 	});
 });

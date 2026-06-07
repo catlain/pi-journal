@@ -8,14 +8,17 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("pi-session-analyzer/core", () => ({
-	getSessionFiles: vi.fn(),
-	readJsonlFile: vi.fn(),
-}));
-
-import { collectSessionActivities } from "../lib/sessions";
-import { getSessionFiles, readJsonlFile } from "pi-session-analyzer/core";
+import { collectSessionActivities, _injectModules } from "../lib/sessions";
 import type { Mock } from "vitest";
+
+const getSessionFiles = vi.fn();
+const readJsonlFile = vi.fn();
+
+_injectModules({
+	core: { getSessionFiles, readJsonlFile },
+	analyze: null,
+	takeover: null,
+});
 
 describe("collectSessionActivities — 错误路径与优化", () => {
 	beforeEach(() => {
