@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { sep } from "node:path";
 
 // Mock node:fs
 vi.mock("node:fs", () => ({
@@ -61,8 +62,9 @@ function setupMemoryDir(files: MockFile[]) {
 			(err as any).code = "ENOENT";
 			throw err;
 		}
-		// 3. L1 目录 → 存在
-		if (p.endsWith("/memory") || p.includes("agent/memory")) {
+		// 3. L1 目录 → 存在（兼容 Windows 反斜杠路径）
+		const normalizedP = p.replace(/\\/g, "/");
+		if (normalizedP.endsWith("/memory") || normalizedP.includes("agent/memory")) {
 			if (opts?.throwIfNoEntry === false) return true;
 			return { isDirectory: () => true };
 		}
@@ -72,9 +74,10 @@ function setupMemoryDir(files: MockFile[]) {
 		throw err;
 	});
 
-	// readdirSync: L1 目录返回文件列表
+	// readdirSync: L1 目录返回文件列表（兼容 Windows 反斜杠路径）
 	(readdirSync as Mock).mockImplementation((p: string) => {
-		if (p.endsWith("/memory") || p.includes("agent/memory")) {
+		const normalizedP = p.replace(/\\/g, "/");
+		if (normalizedP.endsWith("/memory") || normalizedP.includes("agent/memory")) {
 			return files.map((f) => f.name);
 		}
 		return [];
