@@ -62,14 +62,20 @@ const MEMORY_DIRS: Array<{ dir: string; scope: "L1" | "L2" }> = [
 export async function collectMemoryChanges(opts: {
 	since: string;
 	until: string;
+	cwd?: string;
 }): Promise<MemoryChangeResult[]> {
-	const { since, until } = opts;
+	const { since, until, cwd } = opts;
 	const sinceMs = new Date(since).getTime();
 	const untilMs = new Date(until).getTime();
 
 	const results: MemoryChangeResult[] = [];
 
-	for (const { dir } of MEMORY_DIRS) {
+	const memoryDirs = [
+		{ dir: join(homedir(), ".pi/agent/memory"), scope: "L1" as const },
+		{ dir: cwd ? join(cwd, ".pi/memory") : ".pi/memory", scope: "L2" as const },
+	];
+
+	for (const { dir } of memoryDirs) {
 		const entries = scanMemoryDirWithStats(dir);
 
 		for (const mem of entries) {

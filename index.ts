@@ -74,15 +74,17 @@ async function generateReport(timeRange: string): Promise<string | null> {
 		period = since.slice(0, 10);
 	}
 
+	const repos = discoverGitRepos();
+
 	const [gitActivity, memoryChanges, sessionActivities] = await Promise.all([
-		safeCollect(() => collectGitActivity({ repoPaths: discoverGitRepos(), since, until }), []),
+		safeCollect(() => collectGitActivity({ repoPaths: repos, since, until }), []),
 		safeCollect(() => collectMemoryChanges({ since, until }), []),
 		safeCollect(() => collectSessionActivities({ since, until }), []),
 	]);
 
 	// 采集 commit messages（需要 gitActivity 结果）
 	const gitCommitMessages = await safeCollect(
-		() => collectCommitMessages(discoverGitRepos(), since, until),
+		() => collectCommitMessages(repos, since, until),
 		[],
 	);
 
